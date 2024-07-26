@@ -623,7 +623,7 @@ def train_rgb_ir(hyp, opt, device, tb_writer=None):
     dataloader, dataset = create_dataloader_rgb_ir(train_path_rgb, train_path_ir, imgsz, batch_size, gs, opt,
                                             hyp=hyp, augment=True, cache=opt.cache_images, rect=opt.rect, rank=rank,
                                             world_size=opt.world_size, workers=opt.workers,
-                                            image_weights=opt.image_weights, quad=opt.quad, prefix=colorstr('train: '))
+                                            image_weights=opt.image_weights, quad=opt.quad, prefix=colorstr('train: '), use_empty=opt.use_empty)
     mlc = np.concatenate(dataset.labels, 0)[:, 0].max()  # max label class
     nb = len(dataloader)  # number of batches
     print(mlc)
@@ -941,6 +941,7 @@ if __name__ == '__main__':
     parser.add_argument('--project', default='runs/train', help='save to project/name')
     parser.add_argument('--entity', default=None, help='W&B entity')
     parser.add_argument('--name', default='exp', help='save to project/name')
+    parser.add_argument('--use-empty', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--quad', action='store_true', help='quad dataloader')
     parser.add_argument('--linear-lr', action='store_true', help='linear LR')

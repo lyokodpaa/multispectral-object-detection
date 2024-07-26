@@ -221,7 +221,7 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
 
 
 def create_dataloader_rgb_ir(path1, path2,  imgsz, batch_size, stride, opt, hyp=None, augment=False, cache=False, pad=0.0, rect=False,
-                      rank=-1, world_size=1, workers=8, image_weights=False, quad=False, prefix='', sampler=None):
+                      rank=-1, world_size=1, workers=8, image_weights=False, quad=False, prefix='', sampler=None, use_empty=False):
     # Make sure only the first process in DDP process the dataset first, and the following others can use the cache
     with torch_distributed_zero_first(rank):
         dataset = LoadMultiModalImagesAndLabels(path1, path2, imgsz, batch_size,
@@ -233,7 +233,8 @@ def create_dataloader_rgb_ir(path1, path2,  imgsz, batch_size, stride, opt, hyp=
                                       stride=int(stride),
                                       pad=pad,
                                       image_weights=image_weights,
-                                      prefix=prefix)
+                                      prefix=prefix,
+                                      use_empty=use_empty)
 
     batch_size = min(batch_size, len(dataset))
     nw = min([os.cpu_count() // world_size, batch_size if batch_size > 1 else 0, workers])  # number of workers
@@ -822,7 +823,8 @@ class LoadMultiModalImagesAndLabels(Dataset):  # for training/testing
     FQY  载入多模态数据 （RGB 和 IR）
     """
     def __init__(self, path_rgb, path_ir, img_size=640, batch_size=16, augment=False, hyp=None, rect=False, image_weights=False,
-                 cache_images=False, single_cls=False, stride=32, pad=0.0, prefix=''):
+                 cache_images=False, single_cls=False, stride=32, pad=0.0, prefix='', use_empty=False):
+        self.use_empty = use_empty
         self.img_size = img_size
         self.augment = augment
         self.hyp = hyp
@@ -1353,7 +1355,10 @@ def load_image_rgb_ir(self, index):
         # print(path_ir)
 
         img_rgb = cv2.imread(path_rgb)  # BGR
-        img_ir = cv2.imread(path_ir)  # BGR
+        if self.use_empty:
+            img_ir = np.zeros(cv2.imread(path_ir).shape, dtype=np.uint8)
+        else:
+            img_ir = cv2.imread(path_ir)  # BGR
 
         assert img_rgb is not None, 'Image RGB Not Found ' + path_rgb
         assert img_ir is not None, 'Image IR Not Found ' + path_ir
